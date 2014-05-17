@@ -1,0 +1,152 @@
+{
+  function flatten(arr) {
+    if (!Array.isArray(arr))
+      return arr != null ? [arr] : [];
+      
+    var res = [];
+    for (var i = 0; i < arr.length; i++)
+      res.push.apply(res, flatten(arr[i]));
+    
+    return res;
+  }
+}
+
+svg_path
+  = wsp* commands:moveto_drawto_command_groups? wsp* { return flatten(commands); }
+
+moveto_drawto_command_groups
+  = moveto_drawto_command_group (wsp* moveto_drawto_command_groups)?
+
+moveto_drawto_command_group
+  = moveto wsp* drawto_commands?
+
+drawto_commands
+  = drawto_command (wsp* drawto_commands)?
+
+drawto_command
+  = closepath
+  / lineto
+  / horizontal_lineto
+  / vertical_lineto
+  / curveto
+  / smooth_curveto
+  / quadratic_bezier_curveto
+  / smooth_quadratic_bezier_curveto
+  / elliptical_arc
+
+moveto
+  = c:[Mm] wsp* seq:lineto_argument_sequence { return {cmd:c, args:seq} }
+
+closepath
+  = c:[Zz] { return {cmd:c} }
+
+lineto
+  = c:[Ll] wsp* args:lineto_argument_sequence { return {cmd:c, args:args} }
+
+lineto_argument_sequence
+  = first:coordinate_pair comma_wsp? rest:lineto_argument_sequence? { return first.concat(rest || []); }
+
+horizontal_lineto
+  = c:[Hh] wsp* args:coordinate_sequence { return {cmd:c, args:args}}
+
+coordinate_sequence
+  = first:coordinate comma_wsp? rest:coordinate_sequence? { return [first].concat(rest || []); }
+
+vertical_lineto
+  = c:[Vv] wsp* args:coordinate_sequence { return {cmd:c,args:args}; }
+
+curveto
+  = c:[Cc] wsp* args:curveto_argument_sequence { return {cmd:c, args:args}; }
+
+curveto_argument_sequence
+  = first:curveto_argument comma_wsp? rest:curveto_argument_sequence? { return first.concat(rest || []); }
+
+curveto_argument
+  = a:coordinate_pair comma_wsp? b:coordinate_pair comma_wsp? c:coordinate_pair { return a.concat(b, c); }
+
+smooth_curveto
+  = c:[Ss] wsp* args:smooth_curveto_argument_sequence { return {cmd:c, args:args} }
+
+smooth_curveto_argument_sequence
+  = first:smooth_curveto_argument comma_wsp? rest:smooth_curveto_argument_sequence? { return first.concat(rest || []); }
+
+smooth_curveto_argument
+  = b:coordinate_pair comma_wsp? c:coordinate_pair { return b.concat(c); }
+
+quadratic_bezier_curveto
+  = c:[Qq] wsp* args:quadratic_bezier_curveto_argument_sequence { return {cmd:c, args:args} }
+
+quadratic_bezier_curveto_argument_sequence
+  = first:quadratic_bezier_curveto_argument comma_wsp? rest:quadratic_bezier_curveto_argument_sequence?
+  { return [first].concat(rest); }
+
+quadratic_bezier_curveto_argument
+  = a:coordinate_pair comma_wsp? b:coordinate_pair { return a.concat(b); }
+
+smooth_quadratic_bezier_curveto
+  = c:[Tt] wsp* args:smooth_quadratic_bezier_curveto_argument_sequence
+  { return {cmd:c, args:args}; }
+
+smooth_quadratic_bezier_curveto_argument_sequence
+  = first:coordinate_pair comma_wsp? rest:smooth_quadratic_bezier_curveto_argument_sequence?
+  { return first.concat(rest || []); }
+
+elliptical_arc
+  = c:[Aa] wsp* args:elliptical_arc_argument_sequence { return {cmd:c, args:args} }
+
+elliptical_arc_argument_sequence
+  = first:elliptical_arc_argument comma_wsp? rest:elliptical_arc_argument_sequence?
+  { return first.concat(rest || []); }
+
+elliptical_arc_argument
+  = rx:nonnegative_number comma_wsp? ry:nonnegative_number comma_wsp?
+    rot:number comma_wsp large:flag comma_wsp? sweep:flag comma_wsp? xy:coordinate_pair
+  { return [rx,ry,rot,large,sweep].concat(xy); }
+
+coordinate_pair
+  = x:coordinate comma_wsp? y:coordinate
+  { return [x,y] }
+
+coordinate
+  = number
+
+nonnegative_number
+  = floating_point_constant
+  / integer_constant
+
+number
+  = s:sign? x:floating_point_constant { return s == '-' ? -x : x }
+  / s:sign? x:integer_constant        { return s == '-' ? -x : x }
+
+flag
+  = "0" { return true }
+  / "1" { return false }
+
+comma_wsp
+  = (wsp+ comma? wsp*) / (comma wsp*)
+
+comma
+  = ","
+
+integer_constant
+  = digit_sequence
+
+floating_point_constant
+  = f:fractional_constant e:exponent?   { return parseFloat('' + f + e) }
+  / digit_sequence exponent             { return parseFloat('' + f + e) }
+
+fractional_constant
+  = left:digit_sequence? "." right:digit_sequence { return parseFloat(left + '.' + right) }
+  / x:digit_sequence "."                          { return x }
+
+exponent
+  = [eE] sign? digit_sequence
+
+sign
+  = [+-]
+
+digit_sequence
+  = digits:[0-9]+ { return parseInt(digits.join(""), 10) }
+
+wsp
+  = [ \t\n\r]

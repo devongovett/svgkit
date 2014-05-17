@@ -1,0 +1,23 @@
+{
+  "name": "svgkit",
+  "description": "An SVG renderer for PDFKit",
+  "keywords": ["pdf", "svg", "vector"],
+  "version": "0.1.0",
+  "author": {
+      "name": "Devon Govett",
+      "email": "devongovett@gmail.com",
+      "url": "http://badassjs.com/"
+  },
+  "repository": {
+      "type": "git",
+      "url": "https://github.com/devongovett/svg.js.git"
+  },
+  "bugs": "http://github.com/devongovett/svg.js/issues",
+  "dependencies": {
+      "coffee-script": ">=1.0.1",
+      "jsdom": ">=0.2.14",
+      "pdfkit": ">=0.1.9"
+  },
+  "main": "src/SVGDocument",
+  "engine": [ "node >= v0.6.0" ]
+}
