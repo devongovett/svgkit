@@ -12,8 +12,8 @@ class SVGImage extends SVGElement {
     this.y = this.parseUnits('y', 0);
     this.width = this.parseUnits('width');
     this.height = this.parseUnits('height');
-    this.href = this.node.getAttribute('xlink:href');
-    return this.preserveAspectRatio = SVGAspectRatio.parse(this.node.getAttribute('preserveAspectRatio'));
+    this.href = this.attributes['xlink:href'];
+    return this.preserveAspectRatio = SVGAspectRatio.parse(this.attributes.preserveAspectRatio);
   }
     
   getBoundingBox() {

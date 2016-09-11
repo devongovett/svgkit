@@ -27,7 +27,7 @@ let parameters = {
 class SVGPath extends SVGElement {  
   parse() {
     super.parse(...arguments);
-    this.d = this.node.getAttribute('d');
+    this.d = this.attributes.d;
     
     this.d = this.d.replace(/[\r\n]/g, '');
         

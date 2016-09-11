@@ -6,7 +6,7 @@ class SVGPolyLine extends SVGElement {
     super.parse(...arguments);
     this.points = [];
     
-    let points = this.node.getAttribute('points') || '';
+    let points = this.attributes.points || '';
     points = points.trim().replace(/,/g, ' ').replace(/(\d)-(\d)/g, '$1 -$2').split(/\s+/);
     
     // odd number of points is an error

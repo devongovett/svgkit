@@ -1,63 +1,56 @@
 import SVGTransform from './SVGTransform';
 import SVGColor from './SVGColor';
 import SVGLength from './SVGLength';
+import {CSSStyleDeclaration} from 'cssom';
 
-class SVGElement {
-  constructor(document, parentNode, node) {
+export default class SVGElement {
+  constructor(document, parentNode, tagName, attributes) {
     this.document = document;
     this.parentNode = parentNode;
-    this.node = node;
-    this.id = this.node.getAttribute('id');
+    this.tagName = tagName;
+    this.attributes = attributes;
+    this.id = this.attributes.id;
     this.childNodes = [];
-    this.style = {};
-    this.transform = null;
+    this.style = this.parseStyle();
+    this.transform = SVGTransform.parse(this.attributes.transform);
   }
-    
-  static parsers =
-    {g: SVGElement};
-    
+
+  static parsers = {
+    g: SVGElement
+  };
+
   parse() {
-    this.parseStyle();
-    this.transform = SVGTransform.parse(this.node.getAttribute('transform'));
-    
-    for (let i = 0; i < this.node.childNodes.length; i++) {
-      let node = this.node.childNodes[i];
-      if (node.tagName != null) {
-        let Element = SVGElement.parsers[node.tagName.toLowerCase()];
-        if (!Element) {
-          console.log(`Element ${node.tagName} is not supported.`);
-          continue;
-        }
-        
-        let el = new Element(this.document, this, node);
-        el.parse();
-        this.childNodes.push(el);
-      }
-    }
-    
+    // For subclasses.
   }
-    
+
   getElementById(id) {
-    for (let i = 0; i < this.childNodes.length; i++) {
+    for (let node of this.childNodes) {
+      if (!(node instanceof SVGElement)) {
+        continue;
+      }
+
       // check if the node's id matches
-      let node = this.childNodes[i];
-      if (node.id === id) { return node; }
-      
+      if (node.id === id) {
+        return node;
+      }
+
       // check the nodes children
       let sub = node.getElementById(id);
-      if (sub) { return sub; }
+      if (sub) {
+        return sub;
+      }
     }
-    
-    // nothing found  
+
+    // nothing found
     return null;
   }
-    
+
   getBoundingBox() {
     let yMin;
     let xMax;
     let yMax;
     let xMin = yMin = xMax = yMax = 0;
-    
+
     for (let i = 0; i < this.childNodes.length; i++) {
       let node = this.childNodes[i];
       let [x1, y1, x2, y2] = node.getBoundingBox();
@@ -66,28 +59,28 @@ class SVGElement {
       xMax = Math.max(xMax, x2);
       yMax = Math.max(yMax, y2);
     }
-    
+
     return [xMin, yMin, xMax, yMax];
   }
-      
+
   parseUnits(prop, fallback = null, units) {
-    let value = SVGLength.parse(this.node.getAttribute(prop) || fallback);
-    return __guard__(value, x => x.toPixels(this.document, prop, units));
+    let value = SVGLength.parse(this.attributes[prop] || fallback);
+    return value && value.toPixels(this.document, prop, units);
   }
-  
-  // each property in this table defines whether 
-  // it is inherited, and its default value  
+
+  // each property in this table defines whether
+  // it is inherited, and its default value
   static styleProperties = {
     // clipping, masking and compositing
     'clip-path': [false, null],
     'clip-rule': [true, 'nonzero'],
     // 'mask'
     'opacity': [true, 1], // really not inherited, supposed to be rendered off screen first for groups
-    
+
     // gradients
     'stop-color': [false, 'black'],
     'stop-opacity': [false, 1],
-    
+
     // color and painting
     'color': [true, null],
     // 'color-interpolation'
@@ -114,7 +107,7 @@ class SVGElement {
     'stroke-opacity': [true, 1],
     'stroke-width': [true, 1],
     // 'text-rendering'
-    
+
     // text
     // 'alignment-baseline'
     'baseline-shift': [false, 'baseline'],
@@ -129,7 +122,7 @@ class SVGElement {
     // 'text-decoration'
     // 'unicode-bidi'
     // 'word-spacing'
-    
+
     // font
     // 'font'
     // 'font-family'
@@ -140,158 +133,162 @@ class SVGElement {
     // 'font-size-adjust'
     // 'font-stretch'
     // 'font-weight'
-    
+
   _checkValue(v) {
     return (v != null) && v !== '';
   }
-    
+
   parseStyle() {
-    for (let prop in this.styleProperties) {
-      let config = this.styleProperties[prop];
-      let camel = prop.replace(/(-)([a-z])/, (t, a, b) => b.toUpperCase()
-      );
-        
-      let window = this.node.ownerDocument.defaultView;
-      let style = window.getComputedStyle(this.node);
-      
-      // check css value      
-      if (this._checkValue(style[camel])) {
-        this.style[camel] = style[camel];
-      
-      // check attributes  
-      } else if (this._checkValue(this.node.getAttribute(prop))) {
-        this.style[camel] = this.node.getAttribute(prop);
-      
+    let result = {};
+    let style = this._getComputedStyle();
+
+    for (let prop in SVGElement.styleProperties) {
+      let config = SVGElement.styleProperties[prop];
+      let camel = prop.replace(/(-)([a-z])/, (t, a, b) => b.toUpperCase());
+
+      // check css value
+      if (this._checkValue(style[prop])) {
+        result[camel] = style[prop];
+
+      // check attributes
+      } else if (this._checkValue(this.attributes[prop])) {
+        result[camel] = this.attributes[prop];
+
       // check parent if inherited
-      } else if (config[0] && this._checkValue(__guard__(this.parentNode, x => x.style[camel]))) {
-        this.style[camel] = __guard__(this.parentNode, x1 => x1.style[camel]);
-      
+      } else if (config[0] && this._checkValue(this.parentNode && this.parentNode.style[camel])) {
+        result[camel] = this.parentNode && this.parentNode.style[camel];
+
       // use the default otherwise
       } else {
-        this.style[camel] = config[1];
+        result[camel] = config[1];
       }
-      
+
       // if the value of 'inherit' is used, traverse up the
       // tree until an element with the property is found
-      if (this.style[camel] === 'inherit') {
-        this.style[camel] = __guard__(this.parentNode, x2 => x2.style[camel]);
+      if (result[camel] === 'inherit') {
+        result[camel] = this.parentNode && this.parentNode.style[camel];
       }
     }
-    
+
     // clamp opacities
-    this.style.fillOpacity = Math.max(0, Math.min(1, this.style.fillOpacity));
-    this.style.strokeOpacity = Math.max(0, Math.min(1, this.style.strokeOpacity));
-    this.style.opacity = Math.max(0, Math.min(1, this.style.opacity));
-    this.style.stopOpacity = Math.max(0, Math.min(1, this.style.stopOpacity));
-        
-    this.style.fill = SVGColor.parse(this.style.fill);
-    if (this.style.fill === 'currentColor') {
-      this.style.fill = this.style.color;
+    result.fillOpacity = Math.max(0, Math.min(1, result.fillOpacity));
+    result.strokeOpacity = Math.max(0, Math.min(1, result.strokeOpacity));
+    result.opacity = Math.max(0, Math.min(1, result.opacity));
+    result.stopOpacity = Math.max(0, Math.min(1, result.stopOpacity));
+
+    result.fill = SVGColor.parse(result.fill);
+    if (result.fill === 'currentColor') {
+      result.fill = result.color;
     }
-      
-    this.style.stroke = SVGColor.parse(this.style.stroke);
-    if (this.style.stroke === 'currentColor') {
-      this.style.stroke = this.style.color;
+
+    result.stroke = SVGColor.parse(result.stroke);
+    if (result.stroke === 'currentColor') {
+      result.stroke = result.color;
     }
-      
-    return this.style.color = SVGColor.parse(this.style.color);
+
+    result.color = SVGColor.parse(result.color);
+    return result;
   }
-    
+
+  _getComputedStyle() {
+    let css = new CSSStyleDeclaration;
+    css.cssText = this.attributes.style || '';
+    return css;
+  }
+
   draw(ctx, clip = false) {
     if (this.style.display === 'none') { return; }
-    
+
     // TODO: probably shouldn't be handling specific elements here
     if (this.style.visibility === 'hidden') {
-      if (this.node.tagName === 'G') {
+      if (this.tagName === 'g') {
         this.render(ctx, clip);
       } else {
         return;
       }
     }
-    
+
     if (!clip) { ctx.save(); }
     this.applyStyles(ctx);
     this.render(ctx, clip);
-    
+
     if (clip) {
       ctx.clip(this.style.clipRule);
-  
+
     } else if (this.fill !== 'none' && this.stroke !== 'none') {
       ctx.fillAndStroke(this.style.fillRule);
-    
+
     } else if (this.fill !== 'none') {
       ctx.fill(this.style.fillRule);
-    
+
     } else if (this.stroke !== 'none') {
       ctx.stroke();
     }
-            
+
     if (!clip) { return ctx.restore(); }
   }
-    
+
   render(ctx, clip = false) {
     if (this.style.display === 'none') { return; }
-    
-    for (let i = 0; i < this.childNodes.length; i++) {
-      let node = this.childNodes[i];
-      node.draw(ctx, clip);
-    }
 
+    for (let node of this.childNodes) {
+      if (node instanceof SVGElement) {
+        node.draw(ctx, clip);
+      }
+    }
   }
-    
+
   applyStyles(ctx) {
     let m;
-    __guard__(this.transform, x => x.apply(ctx));
-          
+
+    if (this.transform) {
+      this.transform.apply(ctx);
+    }
+
     ctx.lineWidth(parseFloat(this.style.strokeWidth));
     ctx.lineCap(this.style.strokeLinecap);
     ctx.lineJoin(this.style.strokeLinejoin);
     ctx.miterLimit(parseFloat(this.style.strokeMiterlimit));
-      
+
     this.fill = this.style.fill;
     if (m = /^url\(#([^\)]+)\)?/.exec(this.style.fill)) {
       var grad = this.document.getElementById(m[1]);
-      if (__guard__(grad, x1 => x1.isGradient)) {
+      if (grad && grad.isGradient) {
         this.fill = grad.apply(ctx, this);
       }
     }
-        
+
     if (this.fill !== 'none') {
       ctx.fillColor(this.fill);
     }
-      
+
     this.stroke = this.style.stroke;
     if (m = /^url\(#([^\)]+)\)?/.exec(this.style.stroke)) {
       var grad = this.document.getElementById(m[1]);
-      if (__guard__(grad, x2 => x2.isGradient)) {
+      if (grad && grad.isGradient) {
         this.stroke = grad.apply(ctx, this);
       }
     }
-      
+
     if (this.stroke !== 'none') {
       ctx.strokeColor(this.stroke);
     }
-    
+
     if (this.style.opacity !== 1) {
       ctx.opacity(this.style.opacity);
     }
-      
+
     if (this.style.fillOpacity !== 1) {
       ctx.fillOpacity(this.style.fillOpacity);
     }
-    
+
     if (this.style.strokeOpacity !== 1) {
       ctx.strokeOpacity(this.style.strokeOpacity);
     }
-        
+
     if (m = /^url\(#([^\)]+)\)?/.exec(this.style.clipPath)) {
       let clipPath = this.document.getElementById(m[1]);
-      return __guard__(clipPath, x3 => x3.apply(ctx));
+      return clipPath && clipPath.apply(ctx);
     }
   }
-}
-    
-export default SVGElement;
-function __guard__(value, transform) {
-  return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
 }
