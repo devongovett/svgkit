@@ -1,9 +1,7 @@
 SVGElement = require './SVGElement'
 SVGAspectRatio = require './SVGAspectRatio'
 
-class SVGNode extends SVGElement
-  SVGElement.parsers['svg'] = SVGNode
-  
+class SVGNode extends SVGElement  
   parse: ->
     super
     
@@ -26,5 +24,6 @@ class SVGNode extends SVGElement
     super    
     @preserveAspectRatio.apply(ctx, @viewBox, @width, @height)
     ctx.translate(@x, @y)
-    
+
+SVGElement.parsers['svg'] = SVGNode    
 module.exports = SVGNode

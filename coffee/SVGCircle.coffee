@@ -1,8 +1,6 @@
 SVGElement = require './SVGElement'
 
-class SVGCircle extends SVGElement
-    SVGElement.parsers['circle'] = SVGCircle
-    
+class SVGCircle extends SVGElement    
     parse: ->
         super
         @cx = @parseUnits 'cx', 0
@@ -14,3 +12,5 @@ class SVGCircle extends SVGElement
         
     render: (ctx) ->
         ctx.circle @cx, @cy, @r
+        
+SVGElement.parsers['circle'] = SVGCircle

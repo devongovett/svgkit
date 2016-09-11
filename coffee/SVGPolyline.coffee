@@ -1,9 +1,7 @@
 SVGElement = require './SVGElement'
 SVGPoint = require './SVGPoint'
 
-class SVGPolyLine extends SVGElement
-  SVGElement.parsers['polyline'] = SVGPolyLine
-  
+class SVGPolyLine extends SVGElement  
   parse: ->
     super
     @points = []
@@ -47,3 +45,6 @@ class SVGPolyLine extends SVGElement
       ctx.lineTo p.x, p.y
       
     return
+
+SVGElement.parsers['polyline'] = SVGPolyLine    
+module.exports = SVGPolyLine

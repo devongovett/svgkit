@@ -1,9 +1,8 @@
 SVGElement = require './SVGElement'
 
-class SVGRect extends SVGElement
-  SVGElement.parsers['rect'] = SVGRect
-  KAPPA = 4.0 * ((Math.sqrt(2) - 1.0) / 3.0)
-  
+KAPPA = 4.0 * ((Math.sqrt(2) - 1.0) / 3.0)
+
+class SVGRect extends SVGElement  
   parse: ->
     super
     
@@ -49,3 +48,5 @@ class SVGRect extends SVGElement
       ctx.lineTo(x, y + ry)
       ctx.bezierCurveTo(x, y + ry - kry, x + rx - krx, y, x + rx, y)
       ctx.closePath()
+
+SVGElement.parsers['rect'] = SVGRect

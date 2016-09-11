@@ -1,9 +1,7 @@
 SVGElement = require './SVGElement'
 SVGPoint = require './SVGPoint'
 
-class SVGLine extends SVGElement
-  SVGElement.parsers['line'] = SVGLine
-  
+class SVGLine extends SVGElement  
   parse: ->
     super
     x1 = @parseUnits 'x1', 0
@@ -24,3 +22,5 @@ class SVGLine extends SVGElement
   render: (ctx) ->
     ctx.moveTo @p1.x, @p1.y
     ctx.lineTo @p2.x, @p2.y
+
+SVGElement.parsers['line'] = SVGLine

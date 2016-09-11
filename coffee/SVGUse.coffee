@@ -1,8 +1,8 @@
 SVGElement = require './SVGElement'
 
+stack = {}
+
 class SVGUse extends SVGElement
-  SVGElement.parsers['use'] = SVGUse
-  
   parse: ->
     super
     
@@ -17,7 +17,6 @@ class SVGUse extends SVGElement
   getBoundingBox: ->
     return [@x, @y, @x + @width, @y + @height]
     
-  stack = {}
   draw: (ctx, clip = no) ->
     return if @style.display is 'none' or @style.visibility is 'hidden'
     
@@ -45,3 +44,5 @@ class SVGUse extends SVGElement
     
     ctx.restore() unless clip
     delete stack[@_stack_id]
+
+SVGElement.parsers['use'] = SVGUse

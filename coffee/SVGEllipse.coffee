@@ -1,8 +1,6 @@
 SVGElement = require './SVGElement'
 
-class SVGEllipse extends SVGElement
-    SVGElement.parsers['ellipse'] = SVGEllipse
-    
+class SVGEllipse extends SVGElement    
     parse: ->
         super
         @cx = @parseUnits 'cx', 0
@@ -19,3 +17,5 @@ class SVGEllipse extends SVGElement
         
     render: (ctx) ->
         ctx.ellipse @cx, @cy, @rx, @ry
+        
+SVGElement.parsers['ellipse'] = SVGEllipse

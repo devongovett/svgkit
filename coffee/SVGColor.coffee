@@ -1,5 +1,5 @@
 class SVGColor    
-    converters = 
+    @converters:
         rgb:
             regex: /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/
             process: (a, b, c) ->
@@ -16,7 +16,7 @@ class SVGColor
         str = str.trim()
         return str if str is 'none'
         
-        for name, converter of converters
+        for name, converter of @converters
             args = converter.regex.exec(str)
             if args
                 return converter.process.apply(null, args.slice(1))

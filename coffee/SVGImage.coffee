@@ -2,10 +2,9 @@ SVGElement = require './SVGElement'
 SVGAspectRatio = require './SVGAspectRatio'
 path = require 'path'
 
+DATA_URL_RE = /^data:image\/(?:jpeg|jpg|png);base64,/
+
 class SVGImage extends SVGElement
-  SVGElement.parsers['image'] = SVGImage
-  DATA_URL_RE = /^data:image\/(?:jpeg|jpg|png);base64,/
-  
   parse: ->
     super
     
@@ -33,3 +32,4 @@ class SVGImage extends SVGElement
       href = path.resolve @document.path, '..', @href
       ctx.image href, @x, @y, width: @width, height: @height
       
+SVGElement.parsers['image'] = SVGImage

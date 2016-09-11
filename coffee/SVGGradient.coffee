@@ -15,14 +15,15 @@ class SVGGradient extends SVGElement
     
     @stops = []
     i = 0
-    for node in @node.childNodes when node.tagName is 'STOP'
-      stop = new SVGGradientStop(@document, this, node)
-      stop.parse()
+    for node in @node.childNodes
+      if node.tagName?.toLowerCase() is 'stop'
+        stop = new SVGGradientStop(@document, this, node)
+        stop.parse()
       
-      if i > 0 and stop.offset < @stops[i - 1].offset
-        stop.offset = @stops[i - 1].offset
+        if i > 0 and stop.offset < @stops[i - 1].offset
+          stop.offset = @stops[i - 1].offset
         
-      @stops[i++] = stop
+        @stops[i++] = stop
       
     return
       
@@ -78,9 +79,7 @@ class SVGGradientStop extends SVGElement
     offset = @parseUnits 'offset', 0
     @offset = Math.max 0, Math.min 1, offset
 
-class SVGLinearGradient extends SVGGradient
-  SVGElement.parsers['lineargradient'] = SVGLinearGradient
-    
+class SVGLinearGradient extends SVGGradient    
   parse: ->
     super
     @x1 = @parseUnits 'x1', 0, @units
@@ -105,10 +104,10 @@ class SVGLinearGradient extends SVGGradient
     
     grad.transform = @transform.transform if @transform
     return grad
+
+SVGElement.parsers['lineargradient'] = SVGLinearGradient
     
 class SVGRadialGradient extends SVGGradient
-  SVGElement.parsers['radialgradient'] = SVGRadialGradient
-
   parse: ->
     super
     @cx = @parseUnits 'cx', 0.5, @units
@@ -139,3 +138,5 @@ class SVGRadialGradient extends SVGGradient
     
     grad.transform = @transform.transform if @transform
     return grad
+    
+SVGElement.parsers['radialgradient'] = SVGRadialGradient

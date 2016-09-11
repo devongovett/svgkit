@@ -16,15 +16,16 @@ class SVGElement
     @parseStyle()
     @transform = SVGTransform.parse @node.getAttribute 'transform'
     
-    for node in @node.childNodes when node.tagName?
-      Element = SVGElement.parsers[node.tagName.toLowerCase()]
-      if not Element
-        console.log "Element #{node.tagName} is not supported."
-        continue
+    for node in @node.childNodes
+      if node.tagName?
+        Element = SVGElement.parsers[node.tagName.toLowerCase()]
+        if not Element
+          console.log "Element #{node.tagName} is not supported."
+          continue
         
-      el = new Element(@document, this, node)
-      el.parse()
-      @childNodes.push el
+        el = new Element(@document, this, node)
+        el.parse()
+        @childNodes.push el
     
     return
     
@@ -58,7 +59,7 @@ class SVGElement
   
   # each property in this table defines whether 
   # it is inherited, and its default value  
-  styleProperties =
+  @styleProperties:
     # clipping, masking and compositing
     'clip-path': [no, null]
     'clip-rule': [yes, 'nonzero']
@@ -121,11 +122,11 @@ class SVGElement
     # 'font-stretch'
     # 'font-weight'
     
-  checkValue = (v) ->
+  _checkValue: (v) ->
     v? and v isnt ''
     
   parseStyle: ->
-    for prop, config of styleProperties
+    for prop, config of @styleProperties
       camel = prop.replace /(-)([a-z])/, (t, a, b) ->
         b.toUpperCase()
         
@@ -133,15 +134,15 @@ class SVGElement
       style = window.getComputedStyle @node
       
       # check css value      
-      if checkValue style[camel]
+      if @_checkValue style[camel]
         @style[camel] = style[camel]
       
       # check attributes  
-      else if checkValue @node.getAttribute(prop)
+      else if @_checkValue @node.getAttribute(prop)
         @style[camel] = @node.getAttribute prop
       
       # check parent if inherited
-      else if config[0] and checkValue @parentNode?.style[camel]
+      else if config[0] and @_checkValue @parentNode?.style[camel]
         @style[camel] = @parentNode?.style[camel]
       
       # use the default otherwise

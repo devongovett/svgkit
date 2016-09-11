@@ -1,8 +1,6 @@
 SVGElement = require './SVGElement'
 
 class SVGDefs extends SVGElement
-    SVGElement.parsers['defs'] = SVGDefs
-    
     parse: ->
         super
         for node in @childNodes
@@ -10,3 +8,5 @@ class SVGDefs extends SVGElement
             
     draw: ->
         # no drawing of definitions
+        
+SVGElement.parsers['defs'] = SVGDefs

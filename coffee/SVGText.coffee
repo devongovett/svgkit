@@ -2,9 +2,7 @@ SVGElement = require './SVGElement'
 SVGTransform = require './SVGTransform'
 SVGLength = require './SVGLength'
 
-class SVGText extends SVGElement
-  SVGElement.parsers['text'] = SVGText
-  
+class SVGText extends SVGElement  
   parse: ->
     @parseStyle()
     @transform = SVGTransform.parse @node.getAttribute 'transform'
@@ -38,6 +36,8 @@ class SVGText extends SVGElement
       x += span.getWidth(ctx)
     
     ctx.restore() unless clip
+
+SVGElement.parsers['text'] = SVGText
     
 class SVGTextSpan extends SVGElement
   constructor: (@document, @parentNode, @node) ->
