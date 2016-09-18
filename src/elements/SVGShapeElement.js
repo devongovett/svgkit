@@ -10,6 +10,14 @@ export default class SVGShapeElement extends SVGElement {
       return;
     }
 
+    // Get crisp strokes for odd-width lines
+    if (this.stroke) {
+      let translate = (this.style.strokeWidth % 2) / 2;
+      if (translate) {
+        ctx.translate(translate, translate);
+      }
+    }
+
     this.renderPath(ctx, clip);
 
     if (clip) {
