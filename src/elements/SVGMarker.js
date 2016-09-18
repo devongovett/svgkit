@@ -1,6 +1,7 @@
 import SVGElement from './SVGElement';
 import SVGAspectRatio from '../types/SVGAspectRatio';
 import SVGPoint from '../types/SVGPoint';
+import SVGViewBox from '../types/SVGViewBox';
 
 class SVGMarker extends SVGElement {
   parse() {
@@ -10,12 +11,7 @@ class SVGMarker extends SVGElement {
     this.refY = this.parseUnits('refY', 0);
     this.markerWidth = this.parseUnits('markerWidth', 3);
     this.markerHeight = this.parseUnits('markerHeight', 3);
-
-    if (this.attributes.viewBox) {
-      this.viewBox = this.attributes.viewBox.split(/\s+/).map(parseFloat);
-      if (this.viewBox.length !== 4) { this.viewBox = null; }
-    }
-
+    this.viewBox = SVGViewBox.parse(this.attributes.viewBox);
     this.preserveAspectRatio = SVGAspectRatio.parse(this.attributes.preserveAspectRatio);
   }
 

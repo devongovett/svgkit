@@ -1,17 +1,14 @@
 import SVGElement from './SVGElement';
 import SVGAspectRatio from '../types/SVGAspectRatio';
+import SVGViewBox from '../types/SVGViewBox';
 
 export default class SVGNode extends SVGElement {
   parse() {
-    if (this.attributes.viewBox) {
-      this.viewBox = this.attributes.viewBox.split(/\s+/).map(parseFloat);
-      if (this.viewBox.length !== 4) { this.viewBox = null; }
-    }
-
+    this.viewBox = SVGViewBox.parse(this.attributes.viewBox);
     this.width = this.height = 0;
     if (this.viewBox) {
-      this.width = this.viewBox[2];
-      this.height = this.viewBox[3];
+      this.width = this.viewBox.width;
+      this.height = this.viewBox.height;
     }
 
     this.x = this.parseUnits('x', 0);
@@ -23,8 +20,9 @@ export default class SVGNode extends SVGElement {
 
   applyStyles(ctx) {
     super.applyStyles(...arguments);
-    this.preserveAspectRatio.apply(ctx, this.viewBox, this.width, this.height);
+
     ctx.translate(this.x, this.y);
+    this.preserveAspectRatio.apply(ctx, this.viewBox, this.width, this.height);
   }
 }
 

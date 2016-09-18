@@ -23,7 +23,7 @@ class SVGAspectRatio {
       return transform;
     }
 
-    let [x, y, logicalWidth, logicalHeight] = viewBox;
+    let {minX: x, minY: y, width: logicalWidth, height: logicalHeight} = viewBox;
     let logicalRatio = logicalWidth / logicalHeight;
     let physicalRatio = width / height;
     let scaleX = width / logicalWidth;
