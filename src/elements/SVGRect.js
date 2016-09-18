@@ -1,5 +1,6 @@
 import SVGElement from './SVGElement';
 import SVGShapeElement from './SVGShapeElement';
+import Path from '../types/Path';
 
 const KAPPA = 4.0 * ((Math.sqrt(2) - 1.0) / 3.0);
 
@@ -28,31 +29,37 @@ class SVGRect extends SVGShapeElement {
     return this.ry = Math.min(this.height / 2, this.ry);
   }
 
-  getBoundingBox() {
-    return [this.x, this.y, this.x + this.width, this.y + this.height];
-  }
+  getPath() {
+    if (this.width === 0 || this.height === 0) {
+      return null;
+    }
 
-  renderPath(ctx) {
-    if (this.width === 0 || this.height === 0) { return; }
+    let path = new Path;
 
     if (this.rx === 0 && this.ry === 0) {
-      return ctx.rect(this.x, this.y, this.width, this.height);
+      path.moveTo(this.x, this.y);
+      path.lineTo(this.x + this.width, this.y);
+      path.lineTo(this.x + this.width, this.y + this.height);
+      path.lineTo(this.x, this.y + this.height);
+      path.closePath();
     } else {
       let {x,y,width,height,rx,ry} = this;
       let krx = rx * KAPPA;
       let kry = ry * KAPPA;
 
-      ctx.moveTo(x + rx, y);
-      ctx.lineTo((x - rx) + width, y);
-      ctx.bezierCurveTo((x - rx) + width + krx, y, x + width, (y + ry) - kry, x + width, y + ry);
-      ctx.lineTo(x + width, (y + height) - ry);
-      ctx.bezierCurveTo(x + width, ((y + height) - ry) + kry, (x - rx) + width + krx, y + height, (x - rx) + width, y + height);
-      ctx.lineTo(x + rx, y + height);
-      ctx.bezierCurveTo((x + rx) - krx, y + height, x, ((y + height) - ry) + kry, x, (y + height) - ry);
-      ctx.lineTo(x, y + ry);
-      ctx.bezierCurveTo(x, (y + ry) - kry, (x + rx) - krx, y, x + rx, y);
-      return ctx.closePath();
+      path.moveTo(x + rx, y);
+      path.lineTo((x - rx) + width, y);
+      path.bezierCurveTo((x - rx) + width + krx, y, x + width, (y + ry) - kry, x + width, y + ry);
+      path.lineTo(x + width, (y + height) - ry);
+      path.bezierCurveTo(x + width, ((y + height) - ry) + kry, (x - rx) + width + krx, y + height, (x - rx) + width, y + height);
+      path.lineTo(x + rx, y + height);
+      path.bezierCurveTo((x + rx) - krx, y + height, x, ((y + height) - ry) + kry, x, (y + height) - ry);
+      path.lineTo(x, y + ry);
+      path.bezierCurveTo(x, (y + ry) - kry, (x + rx) - krx, y, x + rx, y);
+      path.closePath();
     }
+
+    return path;
   }
 }
 

@@ -1,6 +1,6 @@
 import SVGElement from './SVGElement';
 import SVGPoint from '../types/SVGPoint';
-import SVGShapeElement from './SVGShapeElement';
+import SVGMarkerShape from './SVGMarkerShape';
 import Path from '../types/Path';
 
 let parameters = {
@@ -26,7 +26,7 @@ let parameters = {
   z: 0
 };
 
-class SVGPath extends SVGShapeElement {
+class SVGPath extends SVGMarkerShape {
   parse() {
     super.parse(...arguments);
     this.d = this.attributes.d;
@@ -42,7 +42,7 @@ class SVGPath extends SVGShapeElement {
     let foundDecimal = false;
     let params = 0;
 
-    this.path = new Path;
+    this._path = new Path;
 
     for (let i = 0; i < path.length; i++) {
       // new command
@@ -111,69 +111,8 @@ class SVGPath extends SVGShapeElement {
     runners[cmd].call(this, args);
   }
 
-  getMarkers() {
-    // console.log(this._angles)
-    // return this.render(null);
-    let res = [];
-
-    let points = [];
-    for (let c of this.path.commands) {
-      let point = new SVGPoint(c.args[c.args.length - 2], c.args[c.args.length - 1]);
-      points.push(point);
-    }
-
-    for (let i = 0; i < points.length; i++) {
-      let point = points[i];
-
-      if (i > 0 && i < points.length - 1) {
-        let prev = points[i - 1];
-        let next = points[i + 1];
-        res.push([point, prev.angleTo(next)]);
-      } else if (i === 0) {
-        let next = points[i + 1];
-        res.push([point, point.angleTo(next)]);
-      } else {
-        let prev = points[i - 1];
-        res.push([point, prev.angleTo(point)]);
-      }
-    }
-
-
-    return res;
-  }
-
-  getBoundingBox() {
-    let bbox = this.path.bbox;
-    return [bbox.minX, bbox.minY, bbox.maxX, bbox.maxY];
-  }
-
-  _addMarker(p, from, prior) {
-    // if ((prior != null) && this._angles.length > 0) {
-    //   if (this._angles[this._angles.length - 1] == null) {
-    //     this._angles[this._angles.length - 1] =  this._points[this._points.length - 1].angleTo(prior);
-    //   }
-    // }
-
-    // let outSlope = new SVGPoint(p.x - (from ? from.x : p.x), p.y - (from ? from.y : p.y));
-    // let inSlope = new SVGPoint(p.x)
-
-    this._points.push(p);
-    // this._angles.push(from && from.angleTo(p));
-  }
-
-  renderPath(ctx) {
-    // current point, control point, and subpath starting point
-    // this.ctx = ctx;
-    // this._points = [];
-    // this._angles = [];
-
-    // for (let i = 0; i < this.commands.length; i++) {
-    //   let c = this.commands[i];
-    //   __guard__(runners[c.cmd], x => x.call(this, c.args));
-    // }
-
-    this.path.toFunction()(ctx);
-
+  getPath() {
+    return this._path;
   }
 }
 
@@ -184,7 +123,7 @@ var runners = {
     this.px = this.py = null;
     this.sx = this.cx;
     this.sy = this.cy;
-    this.path.moveTo(this.cx, this.cy);
+    this._path.moveTo(this.cx, this.cy);
   },
 
   m(a) {
@@ -193,7 +132,7 @@ var runners = {
     this.px = this.py = null;
     this.sx = this.cx;
     this.sy = this.cy;
-    this.path.moveTo(this.cx, this.cy);
+    this._path.moveTo(this.cx, this.cy);
   },
 
   C(a) {
@@ -201,11 +140,11 @@ var runners = {
     this.cy = a[5];
     this.px = a[2];
     this.py = a[3];
-    this.path.bezierCurveTo(...a);
+    this._path.bezierCurveTo(...a);
   },
 
   c(a) {
-    this.path.bezierCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy, a[4] + this.cx, a[5] + this.cy);
+    this._path.bezierCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy, a[4] + this.cx, a[5] + this.cy);
     this.px = this.cx + a[2];
     this.py = this.cy + a[3];
     this.cx += a[4];
@@ -218,7 +157,7 @@ var runners = {
       this.py = this.cy;
     }
 
-    this.path.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), a[0], a[1], a[2], a[3]);
+    this._path.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), a[0], a[1], a[2], a[3]);
     this.px = a[0];
     this.py = a[1];
     this.cx = a[2];
@@ -231,7 +170,7 @@ var runners = {
       this.py = this.cy;
     }
 
-    this.path.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), this.cx + a[0], this.cy + a[1], this.cx + a[2], this.cy + a[3]);
+    this._path.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), this.cx + a[0], this.cy + a[1], this.cx + a[2], this.cy + a[3]);
     this.px = this.cx + a[0];
     this.py = this.cy + a[1];
     this.cx += a[2];
@@ -243,11 +182,11 @@ var runners = {
     this.py = a[1];
     this.cx = a[2];
     this.cy = a[3];
-    this.path.quadraticCurveTo(a[0], a[1], this.cx, this.cy);
+    this._path.quadraticCurveTo(a[0], a[1], this.cx, this.cy);
   },
 
   q(a) {
-    this.path.quadraticCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy);
+    this._path.quadraticCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy);
     this.px = this.cx + a[0];
     this.py = this.cy + a[1];
     this.cx += a[2];
@@ -263,7 +202,7 @@ var runners = {
       this.py = this.cy-(this.py-this.cy);
     }
 
-    this.path.quadraticCurveTo(this.px, this.py, a[0], a[1]);
+    this._path.quadraticCurveTo(this.px, this.py, a[0], a[1]);
     this.px = this.cx-(this.px-this.cx);
     this.py = this.cy-(this.py-this.cy);
     this.cx = a[0];
@@ -279,13 +218,13 @@ var runners = {
       this.py = this.cy-(this.py-this.cy);
     }
 
-    this.path.quadraticCurveTo(this.px, this.py, this.cx + a[0], this.cy + a[1]);
+    this._path.quadraticCurveTo(this.px, this.py, this.cx + a[0], this.cy + a[1]);
     this.cx += a[0];
     this.cy += a[1];
   },
 
   A(a) {
-    solveArc(this.path, this.cx, this.cy, a);
+    solveArc(this._path, this.cx, this.cy, a);
     this.cx = a[5];
     this.cy = a[6];
   },
@@ -293,7 +232,7 @@ var runners = {
   a(a) {
     a[5] += this.cx;
     a[6] += this.cy;
-    solveArc(this.path, this.cx, this.cy, a);
+    solveArc(this._path, this.cx, this.cy, a);
     this.cx = a[5];
     this.cy = a[6];
   },
@@ -303,7 +242,7 @@ var runners = {
     this.cx = a[0];
     this.cy = a[1];
     this.px = this.py = null;
-    this.path.lineTo(this.cx, this.cy);
+    this._path.lineTo(this.cx, this.cy);
   },
 
   l(a) {
@@ -311,43 +250,43 @@ var runners = {
     this.cx += a[0];
     this.cy += a[1];
     this.px = this.py = null;
-    this.path.lineTo(this.cx, this.cy);
+    this._path.lineTo(this.cx, this.cy);
   },
 
   H(a) {
     this.cx = a[0];
     this.px = this.py = null;
-    this.path.lineTo(this.cx, this.cy);
+    this._path.lineTo(this.cx, this.cy);
   },
 
   h(a) {
     this.cx += a[0];
     this.px = this.py = null;
-    this.path.lineTo(this.cx, this.cy);
+    this._path.lineTo(this.cx, this.cy);
   },
 
   V(a) {
     this.cy = a[0];
     this.px = this.py = null;
-    this.path.lineTo(this.cx, this.cy);
+    this._path.lineTo(this.cx, this.cy);
   },
 
   v(a) {
     this.cy += a[0];
     this.px = this.py = null;
-    this.path.lineTo(this.cx, this.cy);
+    this._path.lineTo(this.cx, this.cy);
   },
 
   Z() {
-    // this.path.closePath();
-    this.path.lineTo(this.sx, this.sy);
+    // this._path.closePath();
+    this._path.lineTo(this.sx, this.sy);
     this.cx = this.sx;
     this.cy = this.sy;
   },
 
   z() {
-    // this.path.closePath();
-    this.path.lineTo(this.sx, this.sy);
+    // this._path.closePath();
+    this._path.lineTo(this.sx, this.sy);
     this.cx = this.sx;
     this.cy = this.sy;
   }

@@ -1,8 +1,22 @@
 import SVGElement from './SVGElement';
+import SVGPoint from '../types/SVGPoint';
 
 export default class SVGShapeElement extends SVGElement {
+  get path() {
+    if (!this._path) {
+      this._path = this.getPath();
+    }
+
+    return this._path;
+  }
+
   getMarkers() {
     return [];
+  }
+
+  getBoundingBox() {
+    let bbox = this.path.bbox;
+    return [bbox.minX, bbox.minY, bbox.maxX, bbox.maxY];
   }
 
   render(ctx, clip = false) {
@@ -18,7 +32,9 @@ export default class SVGShapeElement extends SVGElement {
       }
     }
 
-    this.renderPath(ctx, clip);
+    if (this.path) {
+      this.path.toFunction()(ctx);
+    }
 
     if (clip) {
       ctx.clip(this.style.clipRule);
