@@ -32,7 +32,7 @@ let transform = '(?:' +
       skewY +
       ')';
 
-let transforms = `(?:${transform}(?:${comma_wsp}${transform})*)`;
+let transforms = `(?:${transform}(?:${comma_wsp}?${transform})*)`;
 let transform_list = `^\\s*(?:${transforms}?)\\s*$`;
 
 let reTransformList = new RegExp(transform_list);
