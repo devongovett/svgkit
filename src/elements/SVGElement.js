@@ -1,18 +1,22 @@
-import SVGTransform from './SVGTransform';
-import SVGColor from './SVGColor';
-import SVGLength from './SVGLength';
+import SVGTransform from '../types/SVGTransform';
+import SVGColor from '../types/SVGColor';
+import SVGLength from '../types/SVGLength';
+import SVGURLReference from '../types/SVGURLReference';
 import {CSSStyleDeclaration} from 'cssom';
 
 export default class SVGElement {
   constructor(document, parentNode, tagName, attributes) {
     this.document = document;
+    this.ownerDocument = document;
     this.parentNode = parentNode;
     this.tagName = tagName;
     this.attributes = attributes;
     this.id = this.attributes.id;
     this.childNodes = [];
-    this.style = this.parseStyle();
+    this.nodeType = 1;
     this.transform = SVGTransform.parse(this.attributes.transform);
+    this.className = this.attributes.class || '';
+    this.style = this.parseStyle();
   }
 
   static parsers = {
@@ -45,6 +49,35 @@ export default class SVGElement {
     return null;
   }
 
+  getAttribute(attribute) {
+    return this.attributes[attribute];
+  }
+
+  setAttribute(attribute, value) {
+    this.attributes[attribute] = value;
+  }
+
+  matchesSelector(selector) {
+    try {
+      return this.document.NW.match(this, selector, this.document.documentElement);
+    } catch (err) {
+      return false;
+    }
+  }
+
+  appendChild(child) {
+    this.childNodes.push(child);
+    return child;
+  }
+
+  get firstChild() {
+    return this.childNodes[0];
+  }
+
+  get lastChild() {
+    return this.childNodes[this.childNodes.length - 1];
+  }
+
   getBoundingBox() {
     let yMin;
     let xMax;
@@ -64,41 +97,39 @@ export default class SVGElement {
   }
 
   parseUnits(prop, fallback = null, units) {
-    let value = SVGLength.parse(this.attributes[prop] || fallback);
-    return value && value.toPixels(this.document, prop, units);
+    let value = SVGLength.parse(this, this.attributes[prop] || fallback);
+    return value && value.toPixels(prop, units);
   }
 
   // each property in this table defines whether
   // it is inherited, and its default value
   static styleProperties = {
     // clipping, masking and compositing
-    'clip-path': [false, null],
+    'clip-path': [false, null, SVGURLReference],
     'clip-rule': [true, 'nonzero'],
+    'overflow': [true, 'hidden'],
+
     // 'mask'
     'opacity': [true, 1], // really not inherited, supposed to be rendered off screen first for groups
 
-    // gradients
-    'stop-color': [false, 'black'],
-    'stop-opacity': [false, 1],
-
     // color and painting
-    'color': [true, null],
+    'color': [true, null, SVGColor],
     // 'color-interpolation'
     // 'color-interpolation-filters'
     // 'color-profile'
     // 'color-rendering'
     'display': [false, 'inline'],
     'visibility': [true, 'visible'],
-    'fill': [true, 'black'],
+    'fill': [true, 'black', SVGColor],
     'fill-opacity': [true, 1],
     'fill-rule': [true, 'nonzero'],
     // 'image-rendering'
-    // 'marker'
-    // 'marker-end'
-    // 'marker-mid'
-    // 'marker-start'
+    'marker': [true, null, SVGURLReference, false],
+    'marker-end': [true, null, SVGURLReference],
+    'marker-mid': [true, null, SVGURLReference],
+    'marker-start': [true, null, SVGURLReference],
     // 'shape-rendering'
-    'stroke': [true, 'none'],
+    'stroke': [true, 'none', SVGColor],
     // 'stroke-dasharray': [yes, 'none']
     // 'stroke-dashoffset': [yes, 0]
     'stroke-linecap': [true, 'butt'],
@@ -107,6 +138,10 @@ export default class SVGElement {
     'stroke-opacity': [true, 1],
     'stroke-width': [true, 1],
     // 'text-rendering'
+
+    // gradients
+    'stop-color': [false, 'black', SVGColor],
+    'stop-opacity': [false, 1],
 
     // text
     // 'alignment-baseline'
@@ -128,7 +163,7 @@ export default class SVGElement {
     // 'font-family'
     // 'font-varient'
     // 'font-style'
-    'font-size': [true, 12]
+    'font-size': [true, 12, SVGLength]
   };
     // 'font-size-adjust'
     // 'font-stretch'
@@ -140,10 +175,10 @@ export default class SVGElement {
 
   parseStyle() {
     let result = {};
-    let style = this._getComputedStyle();
+    let style = this.document.getComputedStyle(this);
 
     for (let prop in SVGElement.styleProperties) {
-      let config = SVGElement.styleProperties[prop];
+      let [inherited, defaultValue, Parser, allowAttribute] = SVGElement.styleProperties[prop];
       let camel = prop.replace(/(-)([a-z])/, (t, a, b) => b.toUpperCase());
 
       // check css value
@@ -151,22 +186,26 @@ export default class SVGElement {
         result[camel] = style[prop];
 
       // check attributes
-      } else if (this._checkValue(this.attributes[prop])) {
+      } else if (this._checkValue(this.attributes[prop]) && allowAttribute !== false) {
         result[camel] = this.attributes[prop];
 
       // check parent if inherited
-      } else if (config[0] && this._checkValue(this.parentNode && this.parentNode.style[camel])) {
-        result[camel] = this.parentNode && this.parentNode.style[camel];
+      } else if (inherited && this.parentNode) {
+        result[camel] = this.parentNode.style[camel];
 
       // use the default otherwise
       } else {
-        result[camel] = config[1];
+        result[camel] = defaultValue;
       }
 
       // if the value of 'inherit' is used, traverse up the
       // tree until an element with the property is found
       if (result[camel] === 'inherit') {
         result[camel] = this.parentNode && this.parentNode.style[camel];
+      }
+
+      if (Parser && result[camel] != null && !(result[camel] instanceof Parser)) {
+        result[camel] = Parser.parse(this.document, result[camel], result);
       }
     }
 
@@ -176,17 +215,16 @@ export default class SVGElement {
     result.opacity = Math.max(0, Math.min(1, result.opacity));
     result.stopOpacity = Math.max(0, Math.min(1, result.stopOpacity));
 
-    result.fill = SVGColor.parse(result.fill);
-    if (result.fill === 'currentColor') {
-      result.fill = result.color;
+    if (result.marker) {
+      result.markerStart = result.markerStart || result.marker;
+      result.markerMid = result.markerMid || result.marker;
+      result.markerEnd = result.markerEnd || result.marker;
     }
 
-    result.stroke = SVGColor.parse(result.stroke);
-    if (result.stroke === 'currentColor') {
-      result.stroke = result.color;
-    }
-
-    result.color = SVGColor.parse(result.color);
+    // result.color = SVGColor.parse(result.color);
+    // result.fill = SVGColor.parse(result.fill, result.color);
+    // result.stroke = SVGColor.parse(result.stroke, result.color);
+    // result.stopColor = SVGColor.parse(result.stopColor, result.color);
     return result;
   }
 
@@ -201,36 +239,40 @@ export default class SVGElement {
 
     // TODO: probably shouldn't be handling specific elements here
     if (this.style.visibility === 'hidden') {
-      if (this.tagName === 'g') {
-        this.render(ctx, clip);
-      } else {
-        return;
-      }
+      // if (this.tagName === 'g') {
+      //   this.render(ctx, clip);
+      // } else {
+      //   return;
+      // }
     }
 
     if (!clip) { ctx.save(); }
     this.applyStyles(ctx);
     this.render(ctx, clip);
 
-    if (clip) {
-      ctx.clip(this.style.clipRule);
+    // if (clip) {
+ //      ctx.clip(this.style.clipRule);
+ //
+ //    } else if (this.fill !== 'none' && this.stroke !== 'none') {
+ //      ctx.fillAndStroke(this.style.fillRule);
+ //
+ //    } else if (this.fill !== 'none') {
+ //      ctx.fill(this.style.fillRule);
+ //
+ //    } else if (this.stroke !== 'none') {
+ //      ctx.stroke();
+ //    }
 
-    } else if (this.fill !== 'none' && this.stroke !== 'none') {
-      ctx.fillAndStroke(this.style.fillRule);
+   this.renderChildren(ctx, clip);
 
-    } else if (this.fill !== 'none') {
-      ctx.fill(this.style.fillRule);
-
-    } else if (this.stroke !== 'none') {
-      ctx.stroke();
-    }
-
-    if (!clip) { return ctx.restore(); }
+    if (!clip) { ctx.restore(); }
   }
 
   render(ctx, clip = false) {
     if (this.style.display === 'none') { return; }
+  }
 
+  renderChildren(ctx, clip = false) {
     for (let node of this.childNodes) {
       if (node instanceof SVGElement) {
         node.draw(ctx, clip);
@@ -250,28 +292,24 @@ export default class SVGElement {
     ctx.lineJoin(this.style.strokeLinejoin);
     ctx.miterLimit(parseFloat(this.style.strokeMiterlimit));
 
-    this.fill = this.style.fill;
-    if (m = /^url\(#([^\)]+)\)?/.exec(this.style.fill)) {
-      var grad = this.document.getElementById(m[1]);
-      if (grad && grad.isGradient) {
-        this.fill = grad.apply(ctx, this);
+    this.fill = this.style.fill && this.style.fill.apply(ctx, this);
+
+    if (this.fill) {
+      if (Array.isArray(this.fill)) {
+        ctx.fillColor(this.fill.slice(0, 3), this.fill[3]);
+      } else {
+        ctx.fillColor(this.fill);
       }
     }
 
-    if (this.fill !== 'none') {
-      ctx.fillColor(this.fill);
-    }
+    this.stroke = this.style.stroke && this.style.stroke.apply(ctx, this);
 
-    this.stroke = this.style.stroke;
-    if (m = /^url\(#([^\)]+)\)?/.exec(this.style.stroke)) {
-      var grad = this.document.getElementById(m[1]);
-      if (grad && grad.isGradient) {
-        this.stroke = grad.apply(ctx, this);
+    if (this.stroke) {
+      if (Array.isArray(this.stroke)) {
+        ctx.strokeColor(this.stroke.slice(0, 3), this.stroke[3]);
+      } else {
+        ctx.strokeColor(this.stroke);
       }
-    }
-
-    if (this.stroke !== 'none') {
-      ctx.strokeColor(this.stroke);
     }
 
     if (this.style.opacity !== 1) {
@@ -286,9 +324,13 @@ export default class SVGElement {
       ctx.strokeOpacity(this.style.strokeOpacity);
     }
 
-    if (m = /^url\(#([^\)]+)\)?/.exec(this.style.clipPath)) {
-      let clipPath = this.document.getElementById(m[1]);
-      return clipPath && clipPath.apply(ctx);
+    // if (m = /^url\(#([^\)]+)\)?/.exec(this.style.clipPath)) {
+    //   let clipPath = this.document.getElementById(m[1]);
+    //   return clipPath && clipPath.apply(ctx);
+    // }
+
+    if (this.style.clipPath) {
+      this.style.clipPath.apply(ctx);
     }
   }
 }

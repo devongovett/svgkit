@@ -1,5 +1,7 @@
 import SVGElement from './SVGElement';
-import SVGPoint from './SVGPoint';
+import SVGPoint from '../types/SVGPoint';
+import SVGShapeElement from './SVGShapeElement';
+import Path from '../types/Path';
 
 let parameters = {
   A: 7,
@@ -24,20 +26,23 @@ let parameters = {
   z: 0
 };
 
-class SVGPath extends SVGElement {  
+class SVGPath extends SVGShapeElement {
   parse() {
     super.parse(...arguments);
     this.d = this.attributes.d;
-    
+
     this.d = this.d.replace(/[\r\n]/g, '');
-        
+
+    this.cx = this.cy = this.px = this.py = this.sx = this.sy = 0;
+
     // parse the data
     let path = this.d;
-    let ret = [];
     let args = [];
     let curArg = "";
     let foundDecimal = false;
     let params = 0;
+
+    this.path = new Path;
 
     for (let i = 0; i < path.length; i++) {
       // new command
@@ -46,7 +51,7 @@ class SVGPath extends SVGElement {
         params = parameters[c];
         if (cmd) { // save existing command
           if (curArg.length > 0) { args[args.length] = +curArg; }
-          ret[ret.length] = {cmd,args};
+          runners[cmd].call(this, args);
 
           args = [];
           curArg = "";
@@ -58,9 +63,9 @@ class SVGPath extends SVGElement {
       // command separator
       } else if (c === " " || c === "\t" || c === "," || (c === "-" && curArg.length > 0 && curArg[curArg.length - 1] !== 'e') || (c === "." && foundDecimal)) {
         if (curArg.length === 0) { continue; }
-          
+
         if (args.length === params) { // handle reused commands
-          ret[ret.length] = {cmd, args};
+          runners[cmd].call(this, args);
           args = [+curArg];
 
           // handle assumed commands
@@ -80,7 +85,7 @@ class SVGPath extends SVGElement {
       } else if (c === '0' || c === '1' || c === '2' || c === '3' || c === '4' || c === '5' || c === '6' || c === '7' || c === '8' || c === '9' || c === '.' || c === '-' || c === '+' || c === 'e' || c === 'E') {
         curArg += c;
         if (c === '.') { foundDecimal = true; }
-        
+
       } else {
         console.log(JSON.stringify(c));
         // bad character, stop parsing
@@ -91,9 +96,9 @@ class SVGPath extends SVGElement {
     // add the last command
     if (curArg.length > 0) {
       if (args.length === params) { // handle reused commands
-        ret[ret.length] = {cmd, args};
+        runners[cmd].call(this, args);
         args = [+curArg];
-    
+
         // handle assumed commands
         if (cmd === "M") { var cmd = "L"; }
         if (cmd === "m") { var cmd = "l"; }
@@ -101,50 +106,85 @@ class SVGPath extends SVGElement {
         args[args.length] = +curArg;
       }
     }
-        
+
     if (curArg.length > 0) { args[args.length] = +curArg; }
-    ret[ret.length] = {cmd,args};
-    return this.commands = ret;
+    runners[cmd].call(this, args);
   }
-    
+
   getMarkers() {
-    return this.render(null);
+    // console.log(this._angles)
+    // return this.render(null);
+    let res = [];
+
+    let points = [];
+    for (let c of this.path.commands) {
+      let point = new SVGPoint(c.args[c.args.length - 2], c.args[c.args.length - 1]);
+      points.push(point);
+    }
+
+    for (let i = 0; i < points.length; i++) {
+      let point = points[i];
+
+      if (i > 0 && i < points.length - 1) {
+        let prev = points[i - 1];
+        let next = points[i + 1];
+        res.push([point, prev.angleTo(next)]);
+      } else if (i === 0) {
+        let next = points[i + 1];
+        res.push([point, point.angleTo(next)]);
+      } else {
+        let prev = points[i - 1];
+        res.push([point, prev.angleTo(point)]);
+      }
+    }
+
+
+    return res;
   }
-    
+
+  getBoundingBox() {
+    let bbox = this.path.bbox;
+    return [bbox.minX, bbox.minY, bbox.maxX, bbox.maxY];
+  }
+
   _addMarker(p, from, prior) {
-    if ((prior != null) && this._angles.length > 0) {
-      let name;
-      if (this._angles[name = this._angles.length - 1] == null) { this._angles[name] =  this._points[this._points.length - 1].angleTo(prior); }
-    }
-      
+    // if ((prior != null) && this._angles.length > 0) {
+    //   if (this._angles[this._angles.length - 1] == null) {
+    //     this._angles[this._angles.length - 1] =  this._points[this._points.length - 1].angleTo(prior);
+    //   }
+    // }
+
+    // let outSlope = new SVGPoint(p.x - (from ? from.x : p.x), p.y - (from ? from.y : p.y));
+    // let inSlope = new SVGPoint(p.x)
+
     this._points.push(p);
-    return this._angles.push(__guard__(from, x => x.angleTo(p)));
+    // this._angles.push(from && from.angleTo(p));
   }
-    
-  render(ctx) {
+
+  renderPath(ctx) {
     // current point, control point, and subpath starting point
-    this.cx = this.cy = this.px = this.py = this.sx = this.sy = 0;
-    this.ctx = ctx;
-    this._points = [];
-    this._angles = [];
-    
-    for (let i = 0; i < this.commands.length; i++) {
-      let c = this.commands[i];
-      __guard__(runners[c.cmd], x => x.call(this, c.args));
-    }
-      
+    // this.ctx = ctx;
+    // this._points = [];
+    // this._angles = [];
+
+    // for (let i = 0; i < this.commands.length; i++) {
+    //   let c = this.commands[i];
+    //   __guard__(runners[c.cmd], x => x.call(this, c.args));
+    // }
+
+    this.path.toFunction()(ctx);
+
   }
 }
-    
-var runners = { 
+
+var runners = {
   M(a) {
     this.cx = a[0];
     this.cy = a[1];
     this.px = this.py = null;
     this.sx = this.cx;
     this.sy = this.cy;
-    this._addMarker(new SVGPoint(this.cx, this.cy));
-    return __guard__(this.ctx, x => x.moveTo(this.cx, this.cy));
+    this.path.moveTo(this.cx, this.cy);
   },
 
   m(a) {
@@ -153,8 +193,7 @@ var runners = {
     this.px = this.py = null;
     this.sx = this.cx;
     this.sy = this.cy;
-    this._addMarker(new SVGPoint(this.cx, this.cy));
-    return __guard__(this.ctx, x => x.moveTo(this.cx, this.cy));
+    this.path.moveTo(this.cx, this.cy);
   },
 
   C(a) {
@@ -162,17 +201,15 @@ var runners = {
     this.cy = a[5];
     this.px = a[2];
     this.py = a[3];
-    this._addMarker(new SVGPoint(this.cx, this.cy), new SVGPoint(this.px, this.py), new SVGPoint(a[0], a[1]));
-    return __guard__(this.ctx, x => x.bezierCurveTo(...a));
+    this.path.bezierCurveTo(...a);
   },
 
   c(a) {
-    __guard__(this.ctx, x => x.bezierCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy, a[4] + this.cx, a[5] + this.cy));
+    this.path.bezierCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy, a[4] + this.cx, a[5] + this.cy);
     this.px = this.cx + a[2];
     this.py = this.cy + a[3];
     this.cx += a[4];
     this.cy += a[5];
-    return this._addMarker(new SVGPoint(this.cx, this.cy), new SVGPoint(this.px, this.py), new SVGPoint(a[0], a[1]));
   },
 
   S(a) {
@@ -181,13 +218,11 @@ var runners = {
       this.py = this.cy;
     }
 
-    __guard__(this.ctx, x => x.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), a[0], a[1], a[2], a[3]));
+    this.path.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), a[0], a[1], a[2], a[3]);
     this.px = a[0];
     this.py = a[1];
     this.cx = a[2];
     this.cy = a[3];
-    
-    return this._addMarker(new SVGPoint(this.cx, this.cy), new SVGPoint(this.px, this.py), new SVGPoint(a[0], a[1]));
   },
 
   s(a) {
@@ -195,12 +230,12 @@ var runners = {
       this.px = this.cx;
       this.py = this.cy;
     }
-    
-    __guard__(this.ctx, x => x.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), this.cx + a[0], this.cy + a[1], this.cx + a[2], this.cy + a[3]));
+
+    this.path.bezierCurveTo(this.cx-(this.px-this.cx), this.cy-(this.py-this.cy), this.cx + a[0], this.cy + a[1], this.cx + a[2], this.cy + a[3]);
     this.px = this.cx + a[0];
     this.py = this.cy + a[1];
     this.cx += a[2];
-    return this.cy += a[3];
+    this.cy += a[3];
   },
 
   Q(a) {
@@ -208,31 +243,31 @@ var runners = {
     this.py = a[1];
     this.cx = a[2];
     this.cy = a[3];
-    return __guard__(this.ctx, x => x.quadraticCurveTo(a[0], a[1], this.cx, this.cy));
+    this.path.quadraticCurveTo(a[0], a[1], this.cx, this.cy);
   },
 
   q(a) {
-    __guard__(this.ctx, x => x.quadraticCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy));
+    this.path.quadraticCurveTo(a[0] + this.cx, a[1] + this.cy, a[2] + this.cx, a[3] + this.cy);
     this.px = this.cx + a[0];
     this.py = this.cy + a[1];
     this.cx += a[2];
-    return this.cy += a[3];
+    this.cy += a[3];
   },
 
   T(a) {
     if (this.px === null) {
       this.px = this.cx;
       this.py = this.cy;
-    } else { 
+    } else {
       this.px = this.cx-(this.px-this.cx);
       this.py = this.cy-(this.py-this.cy);
     }
 
-    __guard__(this.ctx, x => x.quadraticCurveTo(this.px, this.py, a[0], a[1]));
+    this.path.quadraticCurveTo(this.px, this.py, a[0], a[1]);
     this.px = this.cx-(this.px-this.cx);
     this.py = this.cy-(this.py-this.cy);
     this.cx = a[0];
-    return this.cy = a[1];
+    this.cy = a[1];
   },
 
   t(a) {
@@ -244,73 +279,77 @@ var runners = {
       this.py = this.cy-(this.py-this.cy);
     }
 
-    __guard__(this.ctx, x => x.quadraticCurveTo(this.px, this.py, this.cx + a[0], this.cy + a[1]));
+    this.path.quadraticCurveTo(this.px, this.py, this.cx + a[0], this.cy + a[1]);
     this.cx += a[0];
-    return this.cy += a[1];
+    this.cy += a[1];
   },
 
   A(a) {
-    if (this.ctx) { solveArc(this.ctx, this.cx, this.cy, a); }
+    solveArc(this.path, this.cx, this.cy, a);
     this.cx = a[5];
-    return this.cy = a[6];
+    this.cy = a[6];
   },
 
   a(a) {
     a[5] += this.cx;
     a[6] += this.cy;
-    if (this.ctx) { solveArc(this.ctx, this.cx, this.cy, a); }
+    solveArc(this.path, this.cx, this.cy, a);
     this.cx = a[5];
-    return this.cy = a[6];
+    this.cy = a[6];
   },
 
   L(a) {
+    let current = new SVGPoint(this.cx, this.cy);
     this.cx = a[0];
     this.cy = a[1];
     this.px = this.py = null;
-    return __guard__(this.ctx, x => x.lineTo(this.cx, this.cy));
+    this.path.lineTo(this.cx, this.cy);
   },
 
   l(a) {
+    let current = new SVGPoint(this.cx, this.cy);
     this.cx += a[0];
     this.cy += a[1];
     this.px = this.py = null;
-    return __guard__(this.ctx, x => x.lineTo(this.cx, this.cy));
+    this.path.lineTo(this.cx, this.cy);
   },
 
   H(a) {
     this.cx = a[0];
     this.px = this.py = null;
-    return __guard__(this.ctx, x => x.lineTo(this.cx, this.cy));
+    this.path.lineTo(this.cx, this.cy);
   },
 
   h(a) {
     this.cx += a[0];
     this.px = this.py = null;
-    return __guard__(this.ctx, x => x.lineTo(this.cx, this.cy));
+    this.path.lineTo(this.cx, this.cy);
   },
 
   V(a) {
     this.cy = a[0];
     this.px = this.py = null;
-    return __guard__(this.ctx, x => x.lineTo(this.cx, this.cy));
+    this.path.lineTo(this.cx, this.cy);
   },
 
   v(a) {
     this.cy += a[0];
     this.px = this.py = null;
-    return __guard__(this.ctx, x => x.lineTo(this.cx, this.cy));
+    this.path.lineTo(this.cx, this.cy);
   },
 
   Z() {
-    __guard__(this.ctx, x => x.closePath());
+    // this.path.closePath();
+    this.path.lineTo(this.sx, this.sy);
     this.cx = this.sx;
-    return this.cy = this.sy;
+    this.cy = this.sy;
   },
 
   z() {
-    __guard__(this.ctx, x => x.closePath());
+    // this.path.closePath();
+    this.path.lineTo(this.sx, this.sy);
     this.cx = this.sx;
-    return this.cy = this.sy;
+    this.cy = this.sy;
   }
 };
 

@@ -1,6 +1,6 @@
 import SVGElement from './SVGElement';
-import SVGTransform from './SVGTransform';
-import SVGLength from './SVGLength';
+import SVGTransform from '../types/SVGTransform';
+import SVGLength from '../types/SVGLength';
 
 class SVGText extends SVGElement {
   parse() {
@@ -11,18 +11,29 @@ class SVGText extends SVGElement {
     this.y = this.parseUnits('y', 0);
 
     this.spans = [];
-    return (() => {
-      let result = [];
-      for (let i = 0; i < this.node.childNodes.length; i++) {
-        let node = this.node.childNodes[i];
-        let item;
-        if (node.nodeType === 3 || node.nodeName === 'TSPAN') {
-          item = this.spans.push(new SVGTextSpan(this.document, this, node));
-        }
-        result.push(item);
+    // return (() => {
+    //   let result = [];
+    //   for (let i = 0; i < this.node.childNodes.length; i++) {
+    //     let node = this.node.childNodes[i];
+    //     let item;
+    //     if (node.nodeType === 3 || node.nodeName === 'TSPAN') {
+    //       item = this.spans.push(new SVGTextSpan(this.document, this, node));
+    //     }
+    //     result.push(item);
+    //   }
+    //   return result;
+    // })();
+
+    for (let node of this.childNodes) {
+      if (node instanceof SVGTextSpan) {
+        this.spans.push(node);
+      } else if (node.text) {
+        let span = new SVGTextSpan(this.document, this, 'tspan', {});
+        span.childNodes.push(node);
+        span.parse();
+        this.spans.push(span);
       }
-      return result;
-    })();
+    }
   }
 
   getWidth(ctx) {
@@ -57,34 +68,23 @@ class SVGText extends SVGElement {
 SVGElement.parsers['text'] = SVGText;
 
 class SVGTextSpan extends SVGElement {
-  constructor(document, parentNode, node) {
-    super();
-    this.document = document;
-    this.parentNode = parentNode;
-    this.node = node;
-    this.style = {};
-    this.transform = null;
-
-    if (this.node.nodeType === 3) { // text node
-      this.text = this.node.nodeValue;
-      this.style = this.parentNode.style;
-      var space = this.node.parentNode.attributes['xml:space'];
-    } else {
-      this.parseStyle();
-      this.text = this.node.textContent;
-
-      this.x = this.parseUnits('x');
-      this.y = this.parseUnits('y');
-      var space = this.attributes['xml:space'] || this.node.parentNode.attributes['xml:space'];
+  parse() {
+    this.text = '';
+    for (let node of this.childNodes) {
+      this.text += node.text;
     }
 
+    this.x = this.parseUnits('x');
+    this.y = this.parseUnits('y');
+
+    var space = this.attributes['xml:space'] || this.parentNode.attributes['xml:space'];
     if (space !== 'preserve') {
       this.text = this.text.trim();
     }
   }
 
   getWidth(ctx) {
-    return ctx.widthOfString(this.text);
+    return ctx.widthOfString(this.text || '');
   }
 
   applyStyles(ctx) {
@@ -122,7 +122,7 @@ class SVGTextSpan extends SVGElement {
         break;
 
       default:
-        let value = SVGLength.parse(this.style.baselineShift);
+        let value = SVGLength.parse(this.document, this.style.baselineShift);
         if (value) {
           let v = __guard__(value, x1 => x1.toPixels(this.document, 'baselineShift', 'objectBoundingBox'));
           if (value.isPercentage()) {
@@ -139,6 +139,9 @@ class SVGTextSpan extends SVGElement {
     if (!clip) { return ctx.restore(); }
   }
 }
+
+SVGElement.parsers['tspan'] = SVGText;
+
 function __guard__(value, transform) {
   return (typeof value !== 'undefined' && value !== null) ? transform(value) : undefined;
 }

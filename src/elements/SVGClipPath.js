@@ -13,11 +13,12 @@ class SVGClipPath extends SVGElement {
     };
   }
 
-  draw() {}
+  draw() {
     // no drawing of contents
+  }
 
   apply(ctx) {
-    return this.render(ctx, true);
+    return this.renderChildren(ctx, true);
   }
 }
 

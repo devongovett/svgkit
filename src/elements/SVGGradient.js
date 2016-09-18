@@ -1,6 +1,5 @@
 import SVGElement from './SVGElement';
-import SVGTransform from './SVGTransform';
-import SVGColor from './SVGColor';
+import SVGTransform from '../types/SVGTransform';
 
 class SVGGradient extends SVGElement {
   isGradient = true;
@@ -77,13 +76,10 @@ class SVGGradient extends SVGElement {
 class SVGGradientStop extends SVGElement {
   parse() {
     this.opacity = this.style.stopOpacity != null ? this.style.stopOpacity : 1;
-    this.color = SVGColor.parse(this.style.stopColor || 'black');
-    if (this.color === 'currentColor') {
-      this.color = this.style.color;
-    }
+    this.color = this.style.stopColor.apply();
 
     let offset = this.parseUnits('offset', 0);
-    return this.offset = Math.max(0, Math.min(1, offset));
+    this.offset = Math.max(0, Math.min(1, offset));
   }
 }
 
@@ -112,7 +108,16 @@ class SVGLinearGradient extends SVGGradient {
 
     // TODO: spreadMethod
 
-    let grad = ctx.linearGradient(this.x1, this.y1, this.x2, this.y2);
+    let {x1, y1, x2, y2} = this;
+    if (this.transform) {
+      let [m0, m1, m2, m3, m4, m5] = this.transform.transform;
+      x1 = m0 * x1 + m2 * y1 + m4;
+      y1 = m1 * x1 + m3 * y1 + m5;
+      x2 = m0 * x2 + m2 * y2 + m4;
+      y2 = m1 * x2 + m3 * y2 + m5;
+    }
+
+    let grad = ctx.linearGradient(x1, y1, x2, y2);
     for (let i = 0; i < this.stops.length; i++) {
       let stop = this.stops[i];
       grad.stop(stop.offset, stop.color, stop.opacity);
@@ -155,13 +160,22 @@ class SVGRadialGradient extends SVGGradient {
 
     // TODO: spreadMethod
 
-    let grad = ctx.radialGradient(this.fx, this.fy, 0, this.cx, this.cy, this.r);
+    let {cx, cy, fx, fy, r} = this;
+    if (this.transform) {
+      let [m0, m1, m2, m3, m4, m5] = this.transform.transform;
+      cx = m0 * cx + m2 * cy + m4;
+      cy = m1 * cx + m3 * cy + m5;
+      fx = m0 * fx + m2 * fy + m4;
+      fy = m1 * fx + m3 * fy + m5;
+    }
+
+    let grad = ctx.radialGradient(fx, fy, 0, cx, cy, this.r);
     for (let i = 0; i < this.stops.length; i++) {
       let stop = this.stops[i];
       grad.stop(stop.offset, stop.color, stop.opacity);
     }
 
-    if (this.transform) { grad.transform = this.transform.transform; }
+    // if (this.transform) { grad.transform = this.transform.transform; }
     return grad;
   }
 }
