@@ -3,9 +3,16 @@ import SVGPoint from '../types/SVGPoint';
 
 export default class SVGMarkerShape extends SVGShapeElement {
   getMarkers() {
+    let startPoint = null;
     let points = [];
     for (let c of this.path.commands) {
       let point = new SVGPoint(c.args[c.args.length - 2], c.args[c.args.length - 1]);
+      if (c.command === 'moveTo') {
+        startPoint = point;
+      } else if (c.command === 'closePath') {
+        point = startPoint || new SVGPoint(0, 0);
+      }
+
       points.push(point);
     }
 

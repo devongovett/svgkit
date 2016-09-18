@@ -278,15 +278,13 @@ var runners = {
   },
 
   Z() {
-    // this._path.closePath();
-    this._path.lineTo(this.sx, this.sy);
+    this._path.closePath();
     this.cx = this.sx;
     this.cy = this.sy;
   },
 
   z() {
-    // this._path.closePath();
-    this._path.lineTo(this.sx, this.sy);
+    this._path.closePath();
     this.cx = this.sx;
     this.cy = this.sy;
   }
