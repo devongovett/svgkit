@@ -17,6 +17,10 @@ export default class SVGMarkerShape extends SVGShapeElement {
     }
 
     let res = [];
+    if (points.length === 1) {
+      return [points[0], 0];
+    }
+
     for (let i = 0; i < points.length; i++) {
       let point = points[i];
 
