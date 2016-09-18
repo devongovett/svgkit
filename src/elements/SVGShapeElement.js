@@ -49,8 +49,9 @@ export default class SVGShapeElement extends SVGElement {
       ctx.stroke();
     }
 
-    let markers = this.getMarkers();
-    if (markers) {
+    if (this.style.markerStart || this.style.markerMid || this.style.markerEnd) {
+      let markers = this.getMarkers();
+
       if (this.style.markerStart) {
         let def = this.style.markerStart.getReferencedElement();
         def.renderMarker(ctx, this, markers[0][0], markers[0][1]);
