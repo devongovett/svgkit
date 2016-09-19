@@ -54,7 +54,7 @@ class SVGImage extends SVGElement {
       return;
     }
 
-    let parser = new SVGParser(file);
+    let parser = new SVGParser(file, this.width, this.height);
     let contents = fs.readFileSync(file, 'utf8');
     parser.end(contents);
 

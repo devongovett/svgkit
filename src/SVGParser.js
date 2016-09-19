@@ -11,10 +11,10 @@ var ignore = {
 }
 
 export default class SVGParser extends SAXStream {
-  constructor(path) {
+  constructor(path, width, height) {
     super();
     this.stack = [];
-    this.document = new SVGDocument(path);
+    this.document = new SVGDocument(path, width, height);
 
     // SAX is weird (has setters for these).
     this.onopentag = this.onOpenTag;

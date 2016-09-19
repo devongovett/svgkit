@@ -23,7 +23,7 @@ import './elements/Style';
 import SVGElement from './elements/SVGElement';
 
 export default class SVGDocument {
-  constructor(path) {
+  constructor(path, width = 0, height = 0) {
     if (path) {
       this.path = Path.resolve(path);
     }
@@ -31,6 +31,9 @@ export default class SVGDocument {
     this.documentElement = null;
     this.defs = {};
     this.styleSheets = [];
+    this.parents = []; // For detecting cycles
+    this._width = width;
+    this._height = height;
   }
 
   init(documentElement) {
@@ -51,7 +54,7 @@ export default class SVGDocument {
     }
 
     // loop through all child nodes looking for the node
-    return this.documentElement.getElementById(...arguments);
+    return this.documentElement.getElementById(id);
   }
 
   get width() {

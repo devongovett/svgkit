@@ -101,7 +101,7 @@ export default class SVGElement {
   }
 
   parseUnits(prop, fallback = null, units) {
-    let value = SVGLength.parse(this, this.attributes[prop] || fallback);
+    let value = SVGLength.parse(this.document, this.attributes[prop] || fallback);
     return value && value.toPixels(prop, units);
   }
 
