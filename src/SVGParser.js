@@ -1,14 +1,6 @@
-import Parser from 'htmlparser2/lib/WritableStream';
 import SVGElement from './elements/SVGElement';
 import SVGDocument from './SVGDocument';
-
-export default class SVGParser extends Parser {
-  constructor(path) {
-    let handler = new SVGParserHandler(path);
-    super(handler, {decodeEntities: true, xmlMode: true, lowerCaseTags: false});
-    this.document = handler.document;
-  }
-}
+import {SAXStream} from 'sax';
 
 var ignore = {
   'font-face': true,
@@ -18,10 +10,17 @@ var ignore = {
   'title': true
 }
 
-class SVGParserHandler {
+export default class SVGParser extends SAXStream {
   constructor(path) {
+    super(true);
     this.stack = [];
     this.document = new SVGDocument(path);
+
+    // SAX is weird (has setters for these).
+    this.onopentag = this.onOpenTag;
+    this.ontext = this.onText;
+    this.onclosetag = this.onCloseTag;
+    this.ondoctype = this.onDoctype;
   }
 
   push(element) {
@@ -35,9 +34,9 @@ class SVGParserHandler {
     this.stack.push(element);
   }
 
-  onopentag(tagName, attributes) {
-    let parentNode = this.stack[this.stack.length - 1];
+  onOpenTag({name: tagName, attributes}) {
     tagName = tagName.toLowerCase();
+    let parentNode = this.stack[this.stack.length - 1];
     let ElementType = SVGElement.parsers[tagName];
     if (!ElementType) {
       if (tagName.indexOf('d:') !== 0 && !ignore[tagName]) {
@@ -51,7 +50,7 @@ class SVGParserHandler {
     this.push(element);
   }
 
-  ontext(text) {
+  onText(text) {
     text = text.trim();
     if (!text) {
       return;
@@ -67,10 +66,21 @@ class SVGParserHandler {
     }
   }
 
-  onclosetag() {
+  onCloseTag() {
     let element = this.stack.pop();
     if (element instanceof SVGElement) {
       element.parse();
+    }
+  }
+
+  onDoctype(doctype) {
+    const entityMatcher = /<!ENTITY ([^ ]+) "([^"]+)">/g;
+    let result;
+    while (result = entityMatcher.exec(doctype)) {
+      let [, name, value] = result;
+      if (!(name in this._parser.ENTITIES)) {
+        this._parser.ENTITIES[name] = value;
+      }
     }
   }
 }
