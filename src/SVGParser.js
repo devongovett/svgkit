@@ -19,6 +19,7 @@ export default class SVGParser extends SAXStream {
     // SAX is weird (has setters for these).
     this.onopentag = this.onOpenTag;
     this.ontext = this.onText;
+    this.oncdata = this.onText;
     this.onclosetag = this.onCloseTag;
     this.ondoctype = this.onDoctype;
   }
