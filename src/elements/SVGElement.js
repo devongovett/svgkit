@@ -3,6 +3,7 @@ import SVGColor from '../types/SVGColor';
 import SVGLength from '../types/SVGLength';
 import SVGURLReference from '../types/SVGURLReference';
 import {CSSStyleDeclaration} from 'cssom';
+import Path from 'path';
 
 export default class SVGElement {
   constructor(document, parentNode, tagName, attributes) {
@@ -17,6 +18,9 @@ export default class SVGElement {
     this.transform = SVGTransform.parse(this.attributes.transform);
     this.className = this.attributes.class || '';
     this.style = this.parseStyle();
+
+    let parentBase = this.parentNode ? this.parentNode.xmlBase : Path.dirname(this.document.path);
+    this.xmlBase = Path.resolve(parentBase, this.attributes['xml:base'] || '');
   }
 
   static parsers = {

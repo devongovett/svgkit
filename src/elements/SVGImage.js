@@ -30,7 +30,7 @@ class SVGImage extends SVGElement {
     if (DATA_URL_RE.test(this.href)) {
       src = this.href.replace(/[\r\n]/g, '');
     } else if (!/^http:/.test(this.href)) {
-      let filePath = path.resolve(this.document.path, '..', this.href);
+      let filePath = path.resolve(this.xmlBase, this.href);
       if (/.svg$/.test(filePath)) {
         return this.renderSVG(filePath, ctx);
       }
