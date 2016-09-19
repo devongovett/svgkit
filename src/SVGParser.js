@@ -12,7 +12,7 @@ var ignore = {
 
 export default class SVGParser extends SAXStream {
   constructor(path) {
-    super(true);
+    super();
     this.stack = [];
     this.document = new SVGDocument(path);
 
@@ -22,6 +22,8 @@ export default class SVGParser extends SAXStream {
     this.oncdata = this.onText;
     this.onclosetag = this.onCloseTag;
     this.ondoctype = this.onDoctype;
+
+    this._parser.looseCase = 'toString';
   }
 
   push(element) {
