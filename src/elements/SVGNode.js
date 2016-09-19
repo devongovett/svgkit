@@ -21,6 +21,11 @@ export default class SVGNode extends SVGElement {
   applyStyles(ctx) {
     super.applyStyles(...arguments);
 
+    if (this.style.overflow === 'hidden' || this.style.overflow === 'scroll') {
+      ctx.rect(this.x, this.y, this.width, this.height);
+      ctx.clip();
+    }
+
     ctx.translate(this.x, this.y);
     this.preserveAspectRatio.apply(ctx, this.viewBox, this.width, this.height);
   }

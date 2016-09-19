@@ -206,6 +206,12 @@ export default class CanvasContext {
     return new Gradient(this.ctx.createRadialGradient(x1, y1, r1, x2, y2, r2));
   }
 
+  getImageSize(src) {
+    let img = new (this.Image);
+    img.src = src;
+    return {width: img.width, height: img.height};
+  }
+
   image(src, x, y, options = {}) {
     let img = new (this.Image);
     img.src = src;

@@ -26,7 +26,7 @@ class SVGRect extends SVGShapeElement {
     }
 
     this.rx = Math.min(this.width / 2, this.rx);
-    return this.ry = Math.min(this.height / 2, this.ry);
+    this.ry = Math.min(this.height / 2, this.ry);
   }
 
   getPath() {

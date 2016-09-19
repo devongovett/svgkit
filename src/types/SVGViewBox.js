@@ -2,7 +2,7 @@ import BBox from './BBox';
 
 export default class SVGViewBox {
   static parse(value) {
-    if (!value) {
+    if (typeof value !== 'string') {
       return null;
     }
 
