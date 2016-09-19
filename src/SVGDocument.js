@@ -25,7 +25,7 @@ import SVGElement from './elements/SVGElement';
 export default class SVGDocument {
   constructor(path) {
     if (path) {
-      this.path = Path.normalize(path);
+      this.path = Path.resolve(path);
     }
 
     this.documentElement = null;

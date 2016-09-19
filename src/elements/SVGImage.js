@@ -24,18 +24,23 @@ class SVGImage extends SVGElement {
   }
 
   render(ctx) {
-    if (this.width === 0 || this.height === 0) { return; }
+    if (this.width === 0 || this.height === 0) {
+      return;
+    }
 
     let src = null;
     if (DATA_URL_RE.test(this.href)) {
       src = this.href.replace(/[\r\n]/g, '');
-    } else if (!/^http:/.test(this.href)) {
+    } else if (!/^(http:)|#/.test(this.href)) {
       let filePath = path.resolve(this.xmlBase, this.href);
       if (/.svg$/.test(filePath)) {
         return this.renderSVG(filePath, ctx);
       }
 
       src = fs.readFileSync(filePath);
+    } else {
+      // Invalid URL
+      return;
     }
 
     let img = ctx.getImageSize(src);
@@ -44,9 +49,16 @@ class SVGImage extends SVGElement {
   }
 
   renderSVG(file, ctx) {
-    let parser = new SVGParser;
+    // Detect cycles
+    if (file === this.document.path || this.document.parents.indexOf(file) !== -1) {
+      return;
+    }
+
+    let parser = new SVGParser(file);
     let contents = fs.readFileSync(file, 'utf8');
     parser.end(contents);
+
+    parser.document.parents = this.document.parents.concat(this.document.path);
 
     this.applyTransform(ctx, parser.document.width, parser.document.height);
     parser.document.draw(ctx);
