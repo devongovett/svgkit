@@ -53,8 +53,9 @@ class SVGImage extends SVGElement {
   }
 
   applyTransform(ctx, nativeWidth, nativeHeight) {
+    ctx.translate(this.x, this.y);
     if (this.style.overflow === 'hidden' || this.style.overflow === 'scroll') {
-      ctx.rect(this.x, this.y, this.width, this.height);
+      ctx.rect(0, 0, this.width, this.height);
       ctx.clip();
     }
 
